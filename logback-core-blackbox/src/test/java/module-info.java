@@ -8,6 +8,7 @@ module ch.qos.logback.core.blackbox {
     requires janino;
     requires org.fusesource.jansi;
 
+    exports ch.qos.logback.core.blackbox.boolex;
     exports ch.qos.logback.core.blackbox.joran.conditional;
     exports ch.qos.logback.core.blackbox.joran;
     exports ch.qos.logback.core.blackbox.appender;

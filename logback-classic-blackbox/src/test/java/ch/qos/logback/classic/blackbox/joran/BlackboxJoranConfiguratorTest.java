@@ -22,14 +22,19 @@ import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.classic.jul.JULHelper;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.util.LogbackMDCAdapter;
+import ch.qos.logback.core.CoreConstants;
+import ch.qos.logback.core.boolex.EventEvaluator;
 import ch.qos.logback.core.joran.spi.JoranException;
 import ch.qos.logback.core.read.ListAppender;
+import ch.qos.logback.core.status.Status;
 import ch.qos.logback.core.testUtil.RandomUtil;
 import ch.qos.logback.core.testUtil.StringListAppender;
 import ch.qos.logback.core.util.StatusPrinter;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -71,6 +76,7 @@ public class BlackboxJoranConfiguratorTest {
         assertTrue(str1.contains(" DEBUG - hello world"));
     }
 
+    @Disabled
     @Test
     public void testEvaluatorFilter() throws JoranException {
         configure(BlackboxClassicTestConstants.JORAN_INPUT_PREFIX + "evaluatorFilter.xml");
@@ -89,6 +95,7 @@ public class BlackboxJoranConfiguratorTest {
         assertEquals("hello", back.getMessage());
     }
 
+    @Disabled
     @Test
     public void testEvaluatorFilterWithImports() throws JoranException {
         configure(BlackboxClassicTestConstants.JORAN_INPUT_PREFIX + "evaluatorFilterWithImports.xml");
@@ -105,6 +112,34 @@ public class BlackboxJoranConfiguratorTest {
         ILoggingEvent back = listAppender.list.get(0);
         assertEquals(Level.WARN, back.getLevel());
         assertEquals("hello", back.getMessage());
+    }
+
+    // CVE-2024-12798: Janino expressions read from a configuration file must never be executed
+    @Test
+    public void janinoEvaluatorExpressionIsNotExecuted() throws JoranException {
+        String sideEffectKey = "logback.blackbox.janinoEvaluatorExec";
+        assertNull(System.getProperty(sideEffectKey));
+        try {
+            configure(BlackboxClassicTestConstants.JORAN_INPUT_PREFIX + "evaluatorWithExec.xml");
+            logger.debug("hello world");
+
+            assertNull(System.getProperty(sideEffectKey));
+            checker.assertContainsMatch(Status.ERROR, "Janino-based event evaluation is disabled");
+
+            @SuppressWarnings("unchecked")
+            Map<String, EventEvaluator<?>> evaluatorMap = (Map<String, EventEvaluator<?>>) loggerContext
+                    .getObject(CoreConstants.EVALUATOR_MAP);
+            assertNotNull(evaluatorMap);
+            assertNull(evaluatorMap.get("execEval"));
+
+            StringListAppender<ILoggingEvent> slAppender = (StringListAppender<ILoggingEvent>) root
+                    .getAppender("STR_LIST");
+            assertNotNull(slAppender);
+            assertEquals(1, slAppender.strList.size());
+            assertTrue(slAppender.strList.get(0).contains("DEBUG - hello world"));
+        } finally {
+            System.clearProperty(sideEffectKey);
+        }
     }
 
     @Test

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--
+  ~ Logback: the reliable, generic, fast and flexible logging framework.
+  ~ Copyright (C) 1999-2024, QOS.ch. All rights reserved.
+  ~
+  ~ This program and the accompanying materials are dual-licensed under
+  ~ either the terms of the Eclipse Public License v1.0 as published by
+  ~ the Eclipse Foundation
+  ~
+  ~   or (per the licensee's choosing)
+  ~
+  ~ under the terms of the GNU Lesser General Public License version 2.1
+  ~ as published by the Free Software Foundation.
+  -->
+
+<!-- CVE-2024-12798: the Janino expressions below must never be compiled nor executed -->
+<configuration>
+
+  <evaluator name="execEval">
+    <expression>System.setProperty("logback.blackbox.janinoEvaluatorExec", "evaluator") == null</expression>
+  </evaluator>
+
+  <appender name="STR_LIST" class="ch.qos.logback.core.testUtil.StringListAppender">
+    <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+      <OnMatch>DENY</OnMatch>
+      <evaluator>
+        <expression>System.setProperty("logback.blackbox.janinoEvaluatorExec", "filter") == null</expression>
+      </evaluator>
+    </filter>
+    <layout>
+      <Pattern>%caller{1, execEval}%level - %m%n</Pattern>
+    </layout>
+  </appender>
+
+  <root level="DEBUG">
+    <appender-ref ref="STR_LIST" />
+  </root>
+</configuration>
