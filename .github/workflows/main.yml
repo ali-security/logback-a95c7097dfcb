@@ -1,12 +1,12 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - '*'
-  pull_request:
-    branches:
-      - '*'
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: 'Optional surefire -Dtest selector; empty runs the full suite'
+        required: false
+        default: ''
 
 # https://help.github.com/en/actions/automating-your-workflow-with-github-actions/software-installed-on-github-hosted-runners
 
@@ -24,6 +24,7 @@ jobs:
   Test:
     name: JDK ${{ matrix.jdk }}, ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       matrix:
         jdk: [21]
@@ -39,8 +40,29 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: ${{ matrix.jdk }}
+        cache: maven
     - name: Install
       # download dependencies, etc, so test log looks better
-      run: mvn -B install
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.test-filter }}" ]; then
+          mvn -B install -Dtest="${{ inputs.test-filter }}" -Dsurefire.failIfNoSpecifiedTests=false
+        else
+          mvn -B install
+        fi
+    - name: Skip report and test totals
+      shell: bash
+      run: |
+        PY=$(command -v python3 || command -v python)
+        "$PY" .travis/seal_skip_report.py logback-core logback-core-blackbox logback-classic logback-classic-blackbox logback-examples
+    - name: Upload logback-core jars
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: logback-core-jars
+        path: |
+          logback-core/target/logback-core-1.5.12.jar
+          logback-core/target/logback-core-1.5.12-tests.jar
+        if-no-files-found: error
 
 

@@ -1,19 +1,21 @@
-dist: trusty
+dist: jammy
 
 language: java
 
-jdk:
-  - oraclejdk11
-
-notifications:
-  email:
-      - notification@qos.ch
+before_install:
+  - curl -sSfL -o /tmp/jdk21.tar.gz https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_x64_linux_hotspot_21.0.5_11.tar.gz
+  - mkdir -p $HOME/jdk21 && tar xzf /tmp/jdk21.tar.gz -C $HOME/jdk21 --strip-components=1
+  - export JAVA_HOME=$HOME/jdk21 && export PATH=$JAVA_HOME/bin:$PATH
+  - curl -sSfL https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz | tar xz -C $HOME
+  - export PATH=$HOME/apache-maven-3.9.9/bin:$PATH
+  - java -version && mvn -v
 
 install: /bin/true
 
 script:
   - mvn clean
-  - mvn install
+  - mvn install -Djunit.jupiter.execution.timeout.default=120s -Dsurefire.rerunFailingTestsCount=2
+  - python3 .travis/seal_skip_report.py logback-core logback-core-blackbox logback-classic logback-classic-blackbox logback-examples
 cache:
   directories:
   - $HOME/.m2

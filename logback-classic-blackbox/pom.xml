@@ -100,7 +100,7 @@
                             <threadCount>8</threadCount>
                             <!--<useUnlimitedThreads>false</useUnlimitedThreads>-->
                             <forkCount>1C</forkCount>
-                            <reuseForks>true</reuseForks>
+                            <reuseForks>false</reuseForks>
                             <reportFormat>plain</reportFormat>
                             <trimStackTrace>false</trimStackTrace>
                             <!-- See https://issues.apache.org/jira/browse/SUREFIRE-1265 -->
